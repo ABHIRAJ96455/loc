@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Tracker Generator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #e0f7fa; text-align: center; padding: 50px; }
+        input, button { padding: 12px; font-size: 16px; margin: 10px; border: 1px solid #00796b; border-radius: 5px; }
+        button { background-color: #00796b; color: white; cursor: pointer; }
+        button:hover { background-color: #004d40; }
+        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #00796b; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; margin: 0 auto; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <h1>Create Tracking Image</h1>
+    <input type="text" id="imageLink" placeholder="Enter Image URL"><br>
+    <button onclick="generateTrackingImage()">Generate</button>
+    <div class="loader" id="loader"></div>
+    <p id="generatedLink"></p>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://live-32776-default-rtdb.firebaseio.com/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function generateTrackingImage() {
+            const link = document.getElementById('imageLink').value;
+            const loader = document.getElementById('loader');
+            const result = document.getElementById('generatedLink');
+
+            if (link) {
+                loader.style.display = 'block';
+                result.innerHTML = '';
+
+                const imageRef = database.ref('trackedImages').push();
+                const trackingId = imageRef.key;
+
+                imageRef.set({
+                    link: link,
+                    startTime: Date.now()
+                }).then(() => {
+                    const trackingLink = `${window.location.origin}/tracking.html?id=${trackingId}`;
+                    loader.style.display = 'none';
+                    result.innerHTML = `Tracking Image Link: <a href="${trackingLink}" target="_blank">${trackingLink}</a>`;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
